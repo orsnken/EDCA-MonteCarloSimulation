@@ -52,6 +52,10 @@ public:
     return backoff_;
   }
 
+  const EdcaParam& param() const {
+    return ep_;
+  }
+
 private:
   const int ssid_;
   const EdcaParam ep_;
@@ -148,7 +152,7 @@ void simulate() {
   // --------------------------------
   // Transmitting are Successed or Failed
   // --------------------------------
-
+  
 }
 
 void init() {
