@@ -14,7 +14,7 @@ int argN;
 int argRep;
 
 struct EdcaParam {
-  enum Type {TYPE_AP, TYPE_STA,};
+  enum Type {TYPE_AP, TYPE_STA, TYPE_UNKNOWN};
   Type type;
   int  aifs;
   int  cw_min;
@@ -22,7 +22,7 @@ struct EdcaParam {
   EdcaParam(Type a_type, int a_aifs = 0, int a_cw_min = 0, int a_cw_max = 0) :
     type(a_type), aifs(a_aifs), cw_min(a_cw_min), cw_max(a_cw_max) {}
 };
-EdcaParam argEdcaParamAp, argEdcaParamSta;
+EdcaParam argEdcaParamAp(EdcaParam::TYPE_UNKNOWN), argEdcaParamSta(EdcaParam::TYPE_UNKNOWN);
 
 class Edca {
 public:
@@ -128,6 +128,10 @@ void init() {
 void run() {
   for (int i = 0; i < argRep; i++) {
     simulate();
+  }
+
+  for (Edca* ap: aps) {
+    
   }
 }
 
