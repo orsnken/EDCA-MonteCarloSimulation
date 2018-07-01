@@ -26,8 +26,8 @@ EdcaParam argEdcaParamAp, argEdcaParamSta;
 
 class Edca {
 public:
-  Edca(EdcaParam ep, int ssid) :
-  ep_(ep), ssid_(ssid) {
+  Edca(EdcaParam ep, int ssid, int mac) :
+  ep_(ep), ssid_(ssid), mac_(mac) {
     calcBackoff();
   }
 
@@ -52,12 +52,21 @@ public:
     return backoff_;
   }
 
+  int ssid() const {
+    return ssid_;
+  }
+
+  int mac() const {
+    return mac_;
+  }
+
   const EdcaParam& param() const {
     return ep_;
   }
 
 private:
   const int ssid_;
+  const int mac_;
   const EdcaParam ep_;
   int backoff_;
   int nfail_;
@@ -152,15 +161,17 @@ void simulate() {
   // --------------------------------
   // Transmitting are Successed or Failed
   // --------------------------------
-  
+  for (Edca *qe: trns_queue) {
+
+  }
 }
 
 void init() {
-  aps.push_back(new Edca(argEdcaParamAp, 0));
-  aps.push_back(new Edca(argEdcaParamAp, 1));
+  aps.push_back(new Edca(argEdcaParamAp, 0, 10));
+  aps.push_back(new Edca(argEdcaParamAp, 1, 20));
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < argN; j++) {
-      stas.push_back(new Edca(argEdcaParamSta, i));
+      stas.push_back(new Edca(argEdcaParamSta, i, 10 * (i + 1) + j));
     }
   }
 }
