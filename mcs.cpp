@@ -162,7 +162,20 @@ void simulate() {
   // Transmitting are Successed or Failed
   // --------------------------------
   for (Edca *qe: trns_queue) {
-
+    bool successed = true;
+    for (Edca *t: trns_queue) {
+      if (qe->mac() != t->mac()) {
+        if (qe->ssid() == t->ssid()) {
+          successed = false;
+          break;
+        }
+      }
+      if (successed) {
+        qe->transmitting_successed();
+      } else {
+        qe->transmitting_failed();
+      }
+    }
   }
 }
 
