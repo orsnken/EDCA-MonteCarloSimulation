@@ -14,17 +14,20 @@ int argN;
 int argRep;
 
 struct EdcaParam {
-  int aifs;
-  int cw_min;
-  int cw_max;
-  EdcaParam(int a_aifs = 0, int a_cw_min = 0, int a_cw_max = 0) :
-    aifs(a_aifs), cw_min(a_cw_min), cw_max(a_cw_max) {}
+  enum Type {TYPE_AP, TYPE_STA,};
+  Type type;
+  int  aifs;
+  int  cw_min;
+  int  cw_max;
+  EdcaParam(Type a_type, int a_aifs = 0, int a_cw_min = 0, int a_cw_max = 0) :
+    type(a_type), aifs(a_aifs), cw_min(a_cw_min), cw_max(a_cw_max) {}
 };
 EdcaParam argEdcaParamAp, argEdcaParamSta;
 
 class Edca {
 public:
-  Edca(EdcaParam ep) : ep_(ep) {
+  Edca(EdcaParam ep, int ssid) :
+  ep_(ep), ssid_(ssid) {
     calcBackoff();
   }
 
@@ -33,19 +36,24 @@ public:
     return --backoff_;
   }
 
-  int transmition_successed() {
+  int transmitting_successed() {
     ntsucc_++;
     nfail_ = 0;
     return calcBackoff();
   }
 
-  int transmition_failed() {
+  int transmitting_failed() {
     ntfail_++;
     nfail_++;
     return calcBackoff();
   }
 
+  int backoff() const {
+    return backoff_;
+  }
+
 private:
+  const int ssid_;
   const EdcaParam ep_;
   int backoff_;
   int nfail_;
@@ -80,8 +88,8 @@ int main(int argc, char **argv) {
       int sta_cw_max = std::stoi(argv[8]);
       argN = std::stoi(argv[1]);
       argRep = std::stoi(argv[2]);
-      argEdcaParamAp  = EdcaParam( ap_aifs,  ap_cw_min,  ap_cw_max);
-      argEdcaParamSta = EdcaParam(sta_aifs, sta_cw_min, sta_cw_max);
+      argEdcaParamAp  = EdcaParam( EdcaParam::TYPE_AP,  ap_aifs,  ap_cw_min,  ap_cw_max);
+      argEdcaParamSta = EdcaParam(EdcaParam::TYPE_STA, sta_aifs, sta_cw_min, sta_cw_max);
       init();
       run();
     } catch (const std::invalid_argument& e) {
@@ -90,8 +98,8 @@ int main(int argc, char **argv) {
   }
 }
 
-std::vector<Edca *> ap;
-std::vector<Edca *> sta;
+std::vector<Edca *> aps;
+std::vector<Edca *> stas;
 
 void run() {
   for (int i = 0; i < argRep; i++) {
@@ -100,15 +108,55 @@ void run() {
 }
 
 void simulate() {
+  std::vector<Edca *> trns_queue;
+  int daifs = argEdcaParamAp.aifs - argEdcaParamSta.aifs;
+  
+  // --------------------------------
+  // STAs Contention Period
+  // --------------------------------
+  for (int i = 0; i < daifs && trns_queue.size() == 0; i++) {
+    for (Edca *sta: stas) {
+      if (sta->backoff() == 0) {
+        trns_queue.push_back(sta);
+      }
+    }
+    if (trns_queue.size() > 0) {
+      for (Edca *sta: stas) {
+        sta->decrement_backoff();
+      }
+    }
+  }
+
+  // --------------------------------
+  // APs and STAs Contention Period
+  // --------------------------------
+  std::vector<Edca *> terminals = aps;
+  terminals.insert(terminals.end(), stas.begin(), stas.end());
+  while (trns_queue.size() == 0) {
+    for (Edca *t: terminals) {
+      if (t->backoff() == 0) {
+        trns_queue.push_back(t);
+      }
+    }
+    if (trns_queue.size() > 0) {
+      for (Edca *t: terminals) {
+        t->decrement_backoff();
+      }
+    }
+  }
+
+  // --------------------------------
+  // Transmitting are Successed or Failed
+  // --------------------------------
 
 }
 
 void init() {
-  ap.push_back(new Edca(argEdcaParamAp));
-  ap.push_back(new Edca(argEdcaParamAp));
+  aps.push_back(new Edca(argEdcaParamAp, 0));
+  aps.push_back(new Edca(argEdcaParamAp, 1));
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < argN; j++) {
-      sta.push_back(new Edca(argEdcaParamSta));
+      stas.push_back(new Edca(argEdcaParamSta, i));
     }
   }
 }
