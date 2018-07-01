@@ -60,6 +60,14 @@ public:
     return mac_;
   }
 
+  int nfailed() const {
+    return ntfail_;
+  }
+
+  int nsuccessed() const {
+    ntsucc_;
+  }
+
   const EdcaParam& param() const {
     return ep_;
   }
@@ -131,7 +139,7 @@ void run() {
   }
 
   for (Edca* ap: aps) {
-    
+    //std::cout << "[" << ap->mac() << "] : " << ap->
   }
 }
 
