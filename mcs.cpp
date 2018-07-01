@@ -27,7 +27,8 @@ EdcaParam argEdcaParamAp(EdcaParam::TYPE_UNKNOWN), argEdcaParamSta(EdcaParam::TY
 class Edca {
 public:
   Edca(EdcaParam ep, int ssid, int mac) :
-  ep_(ep), ssid_(ssid), mac_(mac) {
+  ep_(ep), ssid_(ssid), mac_(mac),
+  backoff_(0), nfail_(0), ntsucc_(0), ntfail_(0) {
     calcBackoff();
   }
 
@@ -39,12 +40,16 @@ public:
   int transmitting_successed() {
     ntsucc_++;
     nfail_ = 0;
+    // std::cout << "[" << mac_ << "] succ" << std::endl; 
     return calcBackoff();
   }
 
   int transmitting_failed() {
     ntfail_++;
-    nfail_++;
+    if (++nfail_ == 6) {
+      nfail_ = 0;
+    }
+    // std::cout << "[" << mac_ << "] fail" << std::endl; 
     return calcBackoff();
   }
 
@@ -65,7 +70,7 @@ public:
   }
 
   int nsuccessed() const {
-    ntsucc_;
+    return ntsucc_;
   }
 
   const EdcaParam& param() const {
@@ -84,8 +89,7 @@ private:
   int calcBackoff() {
     int cw = (ep_.cw_min + 1) * std::pow(2, nfail_) - 1;
     cw = std::min(cw, ep_.cw_max);
-    std::uniform_int_distribution<int> cw_gen(0, cw);
-    backoff_ = cw_gen(rnd_gen);
+    backoff_ = rnd_gen() % (cw + 1);
     assert(backoff_ <= ep_.cw_max);
     return backoff_;
   }
@@ -127,7 +131,7 @@ void init() {
   aps.push_back(new Edca(argEdcaParamAp, 1, 20));
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < argN; j++) {
-      stas.push_back(new Edca(argEdcaParamSta, i, 10 * (i + 1) + j));
+      stas.push_back(new Edca(argEdcaParamSta, i, 10 * (i + 1) + j + 1));
     }
   }
 }
@@ -139,24 +143,38 @@ void run() {
   }
 
   for (Edca* ap: aps) {
-    //std::cout << "[" << ap->mac() << "] : " << ap->
+    std::cout << "[" << ap->mac() << "] : " << (ap->nsuccessed() * 100.0 / argRep)  << "%" << std::endl;
   }
+  for (Edca* sta: stas) {
+    std::cout << "[" << sta->mac() << "] : " << (sta->nsuccessed() * 100.0 / argRep)  << "%" << std::endl;
+  }
+
 }
 
 void simulate() {
   std::vector<Edca *> trns_queue;
   int daifs = argEdcaParamAp.aifs - argEdcaParamSta.aifs;
-  
+
+  // for (Edca *ap: aps) {
+  //   std::cout << "[" << ap->mac() << "] : " << ap->backoff() << std::endl;
+  //   for (Edca *sta: stas) {
+  //     if (ap->ssid() == sta->ssid()) {
+  //       std::cout << "[" << sta->mac() << "] : " << sta->backoff() << std::endl;
+  //     }
+  //   }
+  // } 
+
   // --------------------------------
   // STAs Contention Period
   // --------------------------------
   for (int i = 0; i < daifs && trns_queue.size() == 0; i++) {
     for (Edca *sta: stas) {
       if (sta->backoff() == 0) {
+        // std::cout << "Add Queue " << sta->mac() << std::endl;
         trns_queue.push_back(sta);
       }
     }
-    if (trns_queue.size() > 0) {
+    if (trns_queue.size() == 0) {
       for (Edca *sta: stas) {
         sta->decrement_backoff();
       }
@@ -171,10 +189,11 @@ void simulate() {
   while (trns_queue.size() == 0) {
     for (Edca *t: terminals) {
       if (t->backoff() == 0) {
+        // std::cout << "Add Queue " << t->mac() << std::endl;
         trns_queue.push_back(t);
       }
     }
-    if (trns_queue.size() > 0) {
+    if (trns_queue.size() == 0) {
       for (Edca *t: terminals) {
         t->decrement_backoff();
       }
@@ -193,11 +212,11 @@ void simulate() {
           break;
         }
       }
-      if (successed) {
-        qe->transmitting_successed();
-      } else {
-        qe->transmitting_failed();
-      }
+    }
+    if (successed) {
+      qe->transmitting_successed();
+    } else {
+      qe->transmitting_failed();
     }
   }
 }
