@@ -114,6 +114,17 @@ int main(int argc, char **argv) {
 std::vector<Edca *> aps;
 std::vector<Edca *> stas;
 
+void init() {
+  aps.push_back(new Edca(argEdcaParamAp, 0, 10));
+  aps.push_back(new Edca(argEdcaParamAp, 1, 20));
+  for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < argN; j++) {
+      stas.push_back(new Edca(argEdcaParamSta, i, 10 * (i + 1) + j));
+    }
+  }
+}
+
+
 void run() {
   for (int i = 0; i < argRep; i++) {
     simulate();
@@ -175,16 +186,6 @@ void simulate() {
       } else {
         qe->transmitting_failed();
       }
-    }
-  }
-}
-
-void init() {
-  aps.push_back(new Edca(argEdcaParamAp, 0, 10));
-  aps.push_back(new Edca(argEdcaParamAp, 1, 20));
-  for (int i = 0; i < 2; i++) {
-    for (int j = 0; j < argN; j++) {
-      stas.push_back(new Edca(argEdcaParamSta, i, 10 * (i + 1) + j));
     }
   }
 }
